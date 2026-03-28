@@ -1,0 +1,14 @@
+{
+  "name": "avivi-wa-bridge",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Optional WhatsApp Web bridge; npm install whatsapp-web.js for full pairing",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "optionalDependencies": {
+    "whatsapp-web.js": "^1.23.0",
+    "qrcode-terminal": "^0.12.0"
+  }
+}
