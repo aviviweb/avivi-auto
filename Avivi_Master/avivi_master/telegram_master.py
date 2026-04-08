@@ -39,7 +39,8 @@ def _format_fleet_lines(data: object) -> str:
         lock = "LOCK" if c.get("locked") else "ok"
         pend = c.get("pending_commands", 0)
         own = "TG" if c.get("has_owner_telegram") else "—"
-        lines.append(f"{lock} {cid}… {host} | {lic} | HB:{hb} | cmd:{pend} | {own}")
+        dom = str(c.get("agent_domain", "") or "")[:24] or "—"
+        lines.append(f"{lock} {cid}… {host} | {dom} | {lic} | HB:{hb} | cmd:{pend} | {own}")
     return "\n".join(lines) if lines else "(no clients)"
 
 
@@ -145,8 +146,29 @@ async def cmd_deploy_mission(update: Update, context: ContextTypes.DEFAULT_TYPE)
             "• POST /v1/missions/push with header X-API-Key (JSON: client_id, mission_id, "
             "version, encrypted_blob_b64, signature_hex optional)\n"
             "• Or enqueue client poll: /enqueue_push_mission <client_id>\n"
+            "• Set agent domain: /set_agent_domain <client_id> <text>\n"
             "• Fleet UI: " + _base_url() + "/admin/ui"
         )
+
+
+async def cmd_set_agent_domain(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    if not update.effective_chat or not _allowed(update.effective_chat.id):
+        return
+    args = context.args or []
+    if len(args) < 2:
+        if update.message:
+            await update.message.reply_text("Usage: /set_agent_domain <client_id> <domain…>\nExample: /set_agent_domain abc-uuid שירות לקוחות")
+        return
+    cid = args[0]
+    domain = " ".join(args[1:]).strip()[:256]
+    async with httpx.AsyncClient(timeout=30.0) as client:
+        r = await client.patch(
+            f"{_base_url()}/v1/admin/clients/{cid}/agent_domain",
+            headers={"X-API-Key": settings.admin_api_key},
+            json={"agent_domain": domain},
+        )
+    if update.message:
+        await update.message.reply_text("ok" if r.status_code == 200 else r.text[:500])
 
 
 async def cmd_enqueue_push_mission(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
@@ -177,6 +199,7 @@ def start_master_bot_thread() -> None:
         app.add_handler(CommandHandler("restart_client", cmd_restart_client))
         app.add_handler(CommandHandler("lock_system", cmd_lock_system))
         app.add_handler(CommandHandler("enqueue_push_mission", cmd_enqueue_push_mission))
+        app.add_handler(CommandHandler("set_agent_domain", cmd_set_agent_domain))
         log.info("Master admin bot polling")
         app.run_polling(drop_pending_updates=True)
 

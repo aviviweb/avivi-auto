@@ -1,0 +1,28 @@
+Avivi — frozen builds (Windows)
+================================
+
+Build (developer machine, from repo root):
+  powershell -ExecutionPolicy Bypass -File packaging\build.ps1
+
+Hebrew verification checklist: packaging\INSTALL-HE.txt
+Marketing landing (Hebrew): marketing\index.html
+
+Outputs:
+  dist\AviviMaster\     — fleet server (super-admin). Run AviviMaster.exe.
+  dist\AviviClient\     — desktop client. Run AviviClient.exe.
+
+Distribution:
+  Zip the ENTIRE folder (AviviMaster or AviviClient), not only the .exe.
+  The exe needs the neighboring DLLs and _internal\.
+
+Master (.env):
+  Copy packaging\env.master.example to the same folder as AviviMaster.exe
+  and rename to .env. Edit secrets and port if needed.
+
+Client:
+  Set Master URL in the app UI; use Enroll. Node/Git may still be installed
+  on first run by the app if missing (Windows).
+
+"One installer for everything":
+  PyInstaller gives portable folders. For a single Setup.exe, wrap each folder
+  with Inno Setup or NSIS (not included here).

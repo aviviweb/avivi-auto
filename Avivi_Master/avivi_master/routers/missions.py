@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from avivi_master.db import get_session
-from avivi_master.deps import require_admin
+from avivi_master.deps import AdminContext, require_admin
 from avivi_master.services import fleet
 from avivi_shared.crypto import verify_hmac_sha256
 
@@ -23,10 +23,16 @@ class MissionPushBody(BaseModel):
 
 
 @router.post("/push", dependencies=[Depends(require_admin)])
-async def push_mission(body: MissionPushBody, session: AsyncSession = Depends(get_session)) -> dict:
+async def push_mission(
+    body: MissionPushBody,
+    ctx: AdminContext = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
     client = await fleet.get_client(session, body.client_id)
     if not client:
         raise HTTPException(status_code=404, detail="Unknown client")
+    if ctx.role == "business_admin" and client.business_id != ctx.business_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     blob = base64.b64decode(body.encrypted_blob_b64)
     if body.signature_hex:
         secret = base64.b64decode(client.hmac_secret_b64.encode("ascii"))

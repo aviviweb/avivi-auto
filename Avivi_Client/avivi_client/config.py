@@ -18,6 +18,18 @@ def first_run_deps_marker_path() -> Path:
 
 class ClientSettings(BaseModel):
     master_base_url: str = "http://127.0.0.1:8000"
+    business_id: str = Field(
+        default="",
+        description="Business/tenant id assigned on Master; synced via heartbeat.",
+    )
+    business_name: str = Field(
+        default="",
+        description="Business name assigned on Master; synced via heartbeat.",
+    )
+    agent_domain: str = Field(
+        default="",
+        description="Business domain for this agent; set on Master, synced via heartbeat.",
+    )
     app_version: str = "0.1.0"
     license_status: str = "trial"
     build_channel: str = "stable"

@@ -63,7 +63,7 @@ def _data_dir() -> Path:
 class MainWindow(QMainWindow):
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("Avivi Automation Manager")
+        self.setWindowTitle(self._agent_window_title())
         self.resize(960, 640)
         self.setStyleSheet(THEME_QSS)
 
@@ -99,10 +99,24 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(central)
         root = QVBoxLayout(central)
 
-        title = QLabel("Avivi Client")
+        title = QLabel("Avivi — תחנת סוכן")
         title.setFont(QFont("Segoe UI", 18, QFont.Weight.Bold))
         title.setStyleSheet("color: #34d399;")
         root.addWidget(title)
+
+        biz = (self.settings.business_name or "").strip()
+        self.lbl_business = QLabel(f"עסק (מוגדר במאסטר): {biz or '—'}")
+        self.lbl_business.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        self.lbl_business.setWordWrap(True)
+        root.addWidget(self.lbl_business)
+
+        dom = (self.settings.agent_domain or "").strip()
+        self.lbl_agent_role = QLabel(
+            f"תחום באחריות הסוכן (מוגדר במאסטר): {dom or '—'}"
+        )
+        self.lbl_agent_role.setStyleSheet("color: #94a3b8; font-size: 13px;")
+        self.lbl_agent_role.setWordWrap(True)
+        root.addWidget(self.lbl_agent_role)
 
         tabs = QTabWidget()
         root.addWidget(tabs)
@@ -205,6 +219,14 @@ class MainWindow(QMainWindow):
         self.edit_pg_pass.setEchoMode(QLineEdit.EchoMode.Password)
         self.edit_pg_db = QLineEdit(self.settings.pg_database)
         form.addRow("Master URL", self.edit_master)
+        bn = (self.settings.business_name or "").strip()
+        self.lbl_settings_business = QLabel(bn or "— (מסתנכרן מהמאסטר)")
+        self.lbl_settings_business.setWordWrap(True)
+        form.addRow("עסק (מאסטר, קריאה בלבד)", self.lbl_settings_business)
+        ad = (self.settings.agent_domain or "").strip()
+        self.lbl_settings_agent_domain = QLabel(ad or "— (מסתנכרן מהמאסטר)")
+        self.lbl_settings_agent_domain.setWordWrap(True)
+        form.addRow("תחום סוכן (מאסטר, קריאה בלבד)", self.lbl_settings_agent_domain)
         form.addRow("Build channel (heartbeat)", self.edit_build_ch)
         form.addRow("", self.chk_deps_startup)
         form.addRow("", self.chk_deps_first)
@@ -326,10 +348,43 @@ class MainWindow(QMainWindow):
         self._heartbeat.error_signal.connect(lambda e: self.log_activity(f"Heartbeat error: {e}"))
         self._heartbeat.start()
 
+    def _agent_window_title(self) -> str:
+        dom = (self.settings.agent_domain or "").strip()
+        bn = (self.settings.business_name or "").strip()
+        if dom and bn:
+            return f"Avivi — סוכן ({dom}) · {bn}"
+        if bn:
+            return f"Avivi — סוכן · {bn}"
+        return f"Avivi — סוכן ({dom})" if dom else "Avivi — תחנת סוכן"
+
     def _on_heartbeat(self, data: dict) -> None:
         if data.get("locked"):
             self._system_locked = True
             self.log_activity("Master locked this client.")
+        updates: dict = {}
+        biz_id = (data.get("business_id") or "").strip()
+        biz_name = (data.get("business_name") or "").strip()
+        if biz_id != (self.settings.business_id or "").strip():
+            updates["business_id"] = biz_id
+        if biz_name != (self.settings.business_name or "").strip():
+            updates["business_name"] = biz_name
+        dom = (data.get("agent_domain") or "").strip()
+        if dom != (self.settings.agent_domain or "").strip():
+            updates["agent_domain"] = dom
+        if updates:
+            self.settings = self.settings.model_copy(update=updates)
+            self.settings_store.save(self.settings)
+        if hasattr(self, "lbl_business"):
+            self.lbl_business.setText(f"עסק (מוגדר במאסטר): {biz_name or '—'}")
+        if hasattr(self, "lbl_agent_role"):
+            self.lbl_agent_role.setText(
+                f"תחום באחריות הסוכן (מוגדר במאסטר): {dom or '—'}"
+            )
+        if hasattr(self, "lbl_settings_business"):
+            self.lbl_settings_business.setText(biz_name or "— (מסתנכרן מהמאסטר)")
+        if hasattr(self, "lbl_settings_agent_domain"):
+            self.lbl_settings_agent_domain.setText(dom or "— (מסתנכרן מהמאסטר)")
+        self.setWindowTitle(self._agent_window_title())
         caps = {
             "db_summary": getattr(self, "_last_db_summary", None),
             "wa": self._gateway.pairing_status(),

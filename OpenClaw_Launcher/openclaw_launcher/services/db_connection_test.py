@@ -5,7 +5,7 @@ import httpx
 from openclaw_launcher.services.db_profiles_store import DbProfile
 
 
-def test_bridge_select_one(host: str, port: int, profile_id: str) -> tuple[bool, str]:
+def bridge_select_one(host: str, port: int, profile_id: str) -> tuple[bool, str]:
     """Verify the local launcher DB bridge with SELECT 1 (profile must exist in store)."""
     try:
         r = httpx.post(
@@ -21,7 +21,7 @@ def test_bridge_select_one(host: str, port: int, profile_id: str) -> tuple[bool,
         return False, str(e)[:300]
 
 
-def test_database_connection(prof: DbProfile) -> tuple[bool, str]:
+def database_connection_check(prof: DbProfile) -> tuple[bool, str]:
     try:
         if prof.engine in ("postgresql", "postgres"):
             import psycopg2

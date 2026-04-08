@@ -42,18 +42,32 @@ async def heartbeat(
         body.client_id,
         payload.license_status,
         owner_telegram_chat_id=payload.owner_telegram_chat_id,
+        hostname=payload.hostname,
     )
     pending = await fleet.count_pending_commands(session, body.client_id)
+    row = await fleet.get_client(session, body.client_id)
+    domain = (row.agent_domain or "").strip() if row else ""
+    business_id = row.business_id if row else None
+    business_name = ""
+    if business_id:
+        b = await fleet.get_business(session, business_id)
+        business_name = (b.name or "").strip() if b else ""
     if client.locked:
         return {
             "ok": True,
             "locked": True,
             "server_time": datetime.utcnow().isoformat() + "Z",
             "pending_commands": pending,
+            "agent_domain": domain,
+            "business_id": business_id,
+            "business_name": business_name,
         }
     return {
         "ok": True,
         "locked": False,
         "server_time": datetime.utcnow().isoformat() + "Z",
         "pending_commands": pending,
+        "agent_domain": domain,
+        "business_id": business_id,
+        "business_name": business_name,
     }

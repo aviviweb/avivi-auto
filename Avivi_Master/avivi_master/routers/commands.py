@@ -8,7 +8,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from avivi_master.db import get_session
-from avivi_master.deps import require_admin
+from avivi_master.deps import AdminContext, require_admin
 from avivi_master.services import fleet
 from avivi_shared.crypto import decrypt_json, fernet_from_key
 
@@ -22,7 +22,16 @@ class AdminEnqueueBody(BaseModel):
 
 
 @router.post("/enqueue", dependencies=[Depends(require_admin)])
-async def enqueue(body: AdminEnqueueBody, session: AsyncSession = Depends(get_session)) -> dict:
+async def enqueue(
+    body: AdminEnqueueBody,
+    ctx: AdminContext = Depends(require_admin),
+    session: AsyncSession = Depends(get_session),
+) -> dict:
+    c = await fleet.get_client(session, body.client_id)
+    if not c:
+        raise HTTPException(status_code=404, detail="Unknown client")
+    if ctx.role == "business_admin" and c.business_id != ctx.business_id:
+        raise HTTPException(status_code=403, detail="Forbidden")
     cid = await fleet.enqueue_command(
         session, body.client_id, body.command_type, json.dumps(body.payload, separators=(",", ":"))
     )

@@ -29,6 +29,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "pytest-asyncio>=0.23"]
+build = ["pyinstaller>=6.6"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

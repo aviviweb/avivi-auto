@@ -1,0 +1,32 @@
+Avivi — בדיקת חבילות הפצה (מאסטר + לקוח)
+========================================
+
+אחרי הרצת packaging\build.ps1:
+
+מאסטר (סופר־אדמין)
+-------------------
+□ קיימת תיקייה dist\AviviMaster עם AviviMaster.exe ותיקיית _internal
+□ מעתיקים env.example.txt ל-.env באותה תיקייה, ממלאים סיסמאות חזקות
+□ מריצים AviviMaster.exe — בקונסול אמור להופיע לוג Uvicorn
+□ בדפדפן: http://127.0.0.1:8000/health  → {"status":"ok",...}
+□ http://127.0.0.1:8000/admin — דשבורד פליטת סוכנים (בפרודקשן להגן עם מפתח/פרוקסי)
+□ הגדרת תחום סוכן מרחוק: PATCH /v1/admin/clients/<id>/agent_domain
+  גוף JSON {"agent_domain":"שם התחום"} + כותרת X-API-Key, או בוט מאסטר: /set_agent_domain
+
+לקוח
+----
+□ קיימת תיקייה dist\AviviClient עם AviviClient.exe ו-_internal
+□ מפיצים את כל התיקייה (לא רק ה-exe)
+□ מריצים AviviClient.exe — נפתח חלון Avivi
+□ בשדה Master URL מזינים כתובת המאסטר (למשל http://IP:8000) ולוחצים Enroll
+
+סריקת MongoDB / ODBC בלקוח המוקפא
+-----------------------------------
+אם צריך חבילות אלה בתוך ה-exe: הוסיפו תלות ב-pyproject (למשל pymongo, pyodbc),
+התקינו בסביבה, והוסיפו שם המודול ל-hiddenimports ב-packaging\avivi-client.spec — ואז בנו מחדש.
+
+אם משהו נכשל רק בגרסה המוקפאת
+------------------------------
+□ קראו build\avivi-master\warn-*.txt או build\avivi-client\warn-*.txt
+□ הריצו אותו תרחיש עם: pip install -e . ואז avivi-master / avivi-client
+  אם במקור עובד — כנראה חסר hiddenimport בקובץ .spec
